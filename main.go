@@ -2,20 +2,37 @@ package main
 
 import (
 	"io"
+	"os"
 	"syscall"
 
 	"github.com/grindlemire/gmail-sync/pkg/auth"
 	"github.com/grindlemire/gmail-sync/pkg/db"
 	"github.com/grindlemire/gmail-sync/pkg/gmail"
 	"github.com/grindlemire/log"
+	"github.com/jessevdk/go-flags"
 	"github.com/olivere/elastic/v7"
 	"github.com/vrecan/death"
 )
 
-const user = "me"
+// Opts ...
+type Opts struct {
+	PageToken string `short:"t" long:"page-token" default:"" description:"the token to start with if you want to run at an offset"`
+}
+
+var opts Opts
+var parser = flags.NewParser(&opts, flags.HelpFlag|flags.PassDoubleDash)
 
 func main() {
 	log.Init(log.Default)
+
+	_, err := parser.Parse()
+	if flags.WroteHelp(err) {
+		parser.WriteHelp(os.Stderr) // This writes the help when we want help. This is silenced because we are not writing any errors
+		os.Exit(1)
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	client, err := auth.NewGmailService()
 	if err != nil {
@@ -36,7 +53,7 @@ func main() {
 	flusher.Start()
 	goRoutines = append(goRoutines, flusher)
 
-	processor := gmail.NewMessageProcessor(client, flusher, d)
+	processor := gmail.NewMessageProcessor(client, flusher, d, opts.PageToken)
 	processor.Start()
 	goRoutines = append(goRoutines, processor)
 

@@ -35,15 +35,19 @@ type Processor struct {
 	client  *gmail.Service
 	flusher *db.Flusher
 	d       *death.Death
+
+	// pageToken is used to track the page you are on between runs
+	pageToken string
 }
 
 // NewMessageProcessor creates a new gmail message processor
-func NewMessageProcessor(client *gmail.Service, flusher *db.Flusher, d *death.Death) (p *Processor) {
+func NewMessageProcessor(client *gmail.Service, flusher *db.Flusher, d *death.Death, pageToken string) (p *Processor) {
 	p = &Processor{
-		Life:    life.NewLife(),
-		client:  client,
-		flusher: flusher,
-		d:       d,
+		Life:      life.NewLife(),
+		client:    client,
+		flusher:   flusher,
+		d:         d,
+		pageToken: pageToken,
 	}
 	p.Life.SetRun(p.run)
 	return p
@@ -60,26 +64,27 @@ func (p *Processor) run() {
 }
 
 func (p *Processor) processMessages() (err error) {
-	pageToken := ""
 	for {
 		select {
 		case <-p.Life.Done:
 			return
 		default:
 		}
-
-		r, err := p.client.Users.Messages.List(user).PageToken(pageToken).Do()
+		log.Infof("Current page token: %s", p.pageToken)
+		r, err := p.client.Users.Messages.List(user).PageToken(p.pageToken).Do()
 		if err != nil {
+			log.Errorf("Unable to get next page of tokens. Final page token was %s", p.pageToken)
 			return err
 		}
 
 		err = p.processMessageBatch(r.Messages)
 		if err != nil {
+			log.Errorf("Unable to process next page of tokens. Final page token was %s", p.pageToken)
 			return err
 		}
 
-		pageToken = r.NextPageToken
-		if pageToken == "" {
+		p.pageToken = r.NextPageToken
+		if p.pageToken == "" {
 			p.d.FallOnSword()
 			return nil
 		}
@@ -100,7 +105,8 @@ func (p *Processor) processMessageBatch(batch []*gmail.Message) error {
 			defer wg.Done()
 			message, err := p.client.Users.Messages.Get(user, m.Id).Do()
 			if err != nil {
-				log.Fatalf("unable to retrieve raw message for message %v: %v", m.Id, err)
+				log.Errorf("unable to retrieve raw message for message %v: %v", m.Id, err)
+				return
 			}
 
 			errFound := false
@@ -152,7 +158,6 @@ func (p *Processor) processMessageBatch(batch []*gmail.Message) error {
 			if err != nil {
 				log.Errorf("unable to add message to batch: %v", err)
 				return
-				// return errors.Wrap(err, "failed to add message to batch")
 			}
 		}(m)
 	}
