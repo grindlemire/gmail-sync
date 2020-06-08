@@ -14,6 +14,7 @@ This is a modernized version of [this medium article](https://medium.com/@orwein
    ```
 1. Ensure you have the gmail api turned on for the email you want to sync. See [this article](https://developers.google.com/gmail/api/quickstart/go) for how to enable the api. Make sure the `credentials.json` file is placed in the gmail-sync directory
 1. run `go run main.go` in the gmail-sync directory
+1. To import the dashboard go to the "management" screen (you can find it on the toolbar on the lefthand side of the screent), then go to "saved objects", then "import" and select `dashboard.ndjson` (in this repository).
 
 ## Note
 

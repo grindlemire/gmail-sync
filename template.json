@@ -1,0 +1,31 @@
+{
+  "order": 0,
+  "index_patterns": "gmail",
+  "settings": {},
+  "mappings": {
+    "properties": {
+      "from": {
+        "type": "keyword"
+      },
+      "to": {
+        "type": "keyword"
+      },
+      "subject": {
+        "type": "keyword"
+      },
+      "date": {
+        "type": "date"
+      },
+      "secure": {
+        "type": "boolean"
+      },
+      "hourOfDay": {
+        "type": "integer"
+      },
+      "dayOfWeek": {
+        "type": "keyword"
+      }
+    }
+  },
+  "aliases": {}
+}
